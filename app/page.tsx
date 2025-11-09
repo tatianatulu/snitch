@@ -9,7 +9,7 @@ export default function Home() {
             Message Snitch
           </h1>
           <p className="text-muted-foreground text-lg">
-            Upload a screenshot of messages and let AI analyze who was wrong,
+            Upload a screenshot or paste text of messages to analyze who was wrong,
             gave unsolicited advice, or was being rude.
           </p>
         </div>
