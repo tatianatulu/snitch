@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Message Snitch
+
+A Next.js application that analyzes conversation screenshots using AI to identify who was wrong, gave unsolicited advice, or was being rude.
+
+## Features
+
+- 📸 Upload screenshots of message conversations
+- 🤖 AI-powered analysis using OpenAI GPT-4o
+- 🎯 Identifies:
+  - Who was wrong
+  - Who gave unsolicited advice
+  - Who was being rude
+- 🎨 Beautiful UI built with Shadcn UI and Tailwind CSS
+- 🌙 Dark mode support
+
+## Tech Stack
+
+- **Next.js 16** with App Router and Server Actions
+- **TypeScript**
+- **Tailwind CSS**
+- **Shadcn UI**
+- **OpenAI API** (GPT-4o)
+- **Zod** for schema validation
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- pnpm (or npm/yarn)
+- OpenAI API key
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo-url>
+cd snitch
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+pnpm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create a `.env.local` file in the root directory:
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+You can get your OpenAI API key from [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
-## Learn More
+4. Run the development server:
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Usage
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Click "Upload Screenshot" or drag and drop an image file
+2. Select a screenshot of a conversation
+3. Click "Analyze Screenshot"
+4. View the analysis results showing who was wrong, gave unsolicited advice, or was being rude
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+snitch/
+├── app/
+│   ├── actions/
+│   │   └── analyze.ts          # Server action for AI analysis
+│   ├── layout.tsx              # Root layout
+│   ├── page.tsx                # Home page
+│   └── globals.css             # Global styles
+├── components/
+│   ├── ui/                     # Shadcn UI components
+│   ├── screenshot-upload.tsx   # Upload component
+│   └── analysis-results.tsx    # Results display component
+├── lib/
+│   └── utils.ts                # Utility functions
+└── public/                     # Static assets
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment Variables
+
+- `OPENAI_API_KEY` - Your OpenAI API key (required)
+
+## License
+
+MIT
