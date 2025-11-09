@@ -297,13 +297,23 @@ export async function analyzeScreenshot(
   imageBase64: string | null = null,
   mimeType: string | null = null
 ): Promise<AnalysisResult> {
-  return analyzeConversation(null, imageBase64, mimeType);
+  try {
+    return await analyzeConversation(null, imageBase64, mimeType);
+  } catch (error) {
+    console.error("Error in analyzeScreenshot:", error);
+    throw error;
+  }
 }
 
 export async function analyzeText(
   textContent: string
 ): Promise<AnalysisResult> {
-  return analyzeConversation(textContent, null, null);
+  try {
+    return await analyzeConversation(textContent, null, null);
+  } catch (error) {
+    console.error("Error in analyzeText:", error);
+    throw error;
+  }
 }
 
 async function analyzeConversation(
@@ -311,27 +321,50 @@ async function analyzeConversation(
   imageBase64: string | null = null,
   mimeType: string | null = null
 ): Promise<AnalysisResult> {
-  const apiKey = process.env.API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim();
-  const apiBaseURL = process.env.API_BASE_URL?.trim() || "https://api.openai.com/v1";
-  const apiModel = process.env.API_MODEL?.trim() || "gpt-4o";
-  const useJsonSchema = process.env.USE_JSON_SCHEMA?.trim() !== "false"; // Default to true
+  try {
+    const apiKey = process.env.API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim();
+    const apiBaseURL = process.env.API_BASE_URL?.trim() || "https://api.openai.com/v1";
+    const apiModel = process.env.API_MODEL?.trim() || "gpt-4o";
+    const useJsonSchema = process.env.USE_JSON_SCHEMA?.trim() !== "false"; // Default to true
 
-  if (!apiKey) {
-    throw new Error(
-      "API_KEY or OPENAI_API_KEY is not set in .env.local. Please add your API key and restart the server."
-    );
+    // Log environment variable status (without exposing values)
+    console.log("Environment check:", {
+      hasApiKey: !!apiKey,
+      apiBaseURL: apiBaseURL,
+      apiModel: apiModel,
+      useJsonSchema: useJsonSchema,
+    });
+
+    if (!apiKey) {
+      const error = new Error(
+        "API_KEY or OPENAI_API_KEY is not set. Please add your API key in Vercel environment variables (or .env.local for local development)."
+      );
+      console.error("Missing API key:", error);
+      throw error;
+    }
+
+    if (!apiBaseURL) {
+      const error = new Error(
+        "API_BASE_URL is not set. Please add your API provider's base URL in Vercel environment variables (or .env.local for local development)."
+      );
+      console.error("Missing API base URL:", error);
+      throw error;
+    }
+
+    if (!textContent && !imageBase64) {
+      const error = new Error("Either text content or image must be provided");
+      console.error("Missing input:", error);
+      throw error;
+    }
+
+    return await makeAnalysisRequest(apiBaseURL, apiKey, apiModel, imageBase64, mimeType, textContent, useJsonSchema);
+  } catch (error) {
+    console.error("Error in analyzeConversation:", error);
+    // Re-throw with more context if it's not already a user-friendly error
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Unexpected error: ${String(error)}`);
   }
-
-  if (!apiBaseURL) {
-    throw new Error(
-      "API_BASE_URL is not set in .env.local. Please add your API provider's base URL and restart the server."
-    );
-  }
-
-  if (!textContent && !imageBase64) {
-    throw new Error("Either text content or image must be provided");
-  }
-
-  return makeAnalysisRequest(apiBaseURL, apiKey, apiModel, imageBase64, mimeType, textContent, useJsonSchema);
 }
 
