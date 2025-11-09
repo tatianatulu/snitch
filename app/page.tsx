@@ -1,4 +1,17 @@
+import { Suspense } from "react";
 import { ScreenshotUpload } from "@/components/screenshot-upload";
+
+function LoadingFallback() {
+  return (
+    <div className="w-full max-w-4xl mx-auto space-y-6">
+      <div className="animate-pulse">
+        <div className="h-8 bg-muted rounded w-3/4 mb-4"></div>
+        <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
+        <div className="h-64 bg-muted rounded"></div>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
@@ -13,7 +26,9 @@ export default function Home() {
             gave unsolicited advice, or was being rude.
           </p>
         </div>
-        <ScreenshotUpload />
+        <Suspense fallback={<LoadingFallback />}>
+          <ScreenshotUpload />
+        </Suspense>
       </main>
     </div>
   );
