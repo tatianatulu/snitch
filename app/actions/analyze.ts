@@ -131,77 +131,133 @@ If no one fits a category, use an empty array []. The summary should be in the s
       };
     }
 
-    // Determine the endpoint URL
-    const endpoint = apiBaseURL.endsWith("/")
-      ? `${apiBaseURL}chat/completions`
-      : `${apiBaseURL}/chat/completions`;
+    // Determine the endpoint URL - ensure it has the protocol
+    let baseURL = apiBaseURL.trim();
+    if (!baseURL.startsWith("http://") && !baseURL.startsWith("https://")) {
+      baseURL = `https://${baseURL}`;
+    }
+    
+    // Remove trailing slash if present
+    baseURL = baseURL.replace(/\/$/, "");
+    
+    // Check if baseURL already includes /v1 or /chat/completions
+    let endpoint: string;
+    if (baseURL.includes("/chat/completions")) {
+      endpoint = baseURL;
+    } else if (baseURL.endsWith("/v1")) {
+      endpoint = `${baseURL}/chat/completions`;
+    } else if (!baseURL.includes("/v1")) {
+      // Add /v1 if not present (OpenAI-compatible format)
+      endpoint = `${baseURL}/v1/chat/completions`;
+    } else {
+      endpoint = `${baseURL}/chat/completions`;
+    }
+    
+    console.log("API Request:", { baseURL, endpoint, hasApiKey: !!apiKey });
 
-    // Make the API request
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
+    // Make the API request with increased timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
-    if (!response.ok) {
-      let errorData: any = {};
-      try {
-        const text = await response.text();
-        errorData = text ? JSON.parse(text) : {};
-      } catch {
-        // If parsing fails, use empty object
-      }
-      
-      const errorMessage = 
-        errorData.error?.message || 
-        errorData.message || 
-        errorData.error || 
-        response.statusText ||
-        `HTTP ${response.status}`;
-      
-      console.error("API Error Response:", {
-        status: response.status,
-        statusText: response.statusText,
-        errorData,
-        endpoint,
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
       });
       
-      throw {
-        status: response.status,
-        message: errorMessage,
-        fullError: errorData,
-      };
-    }
+      clearTimeout(timeoutId);
 
-    const data = await response.json();
-    let content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("No response content from API");
-    }
-
-    // If not using json_schema, the content might be a string that needs parsing
-    let parsed: any;
-    if (typeof content === "string") {
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-        // If parsing fails, try to extract JSON from the text
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error("Could not parse JSON from API response");
+      if (!response.ok) {
+        let errorData: any = {};
+        try {
+          const text = await response.text();
+          errorData = text ? JSON.parse(text) : {};
+        } catch {
+          // If parsing fails, use empty object
         }
+        
+        const errorMessage = 
+          errorData.error?.message || 
+          errorData.message || 
+          errorData.error || 
+          response.statusText ||
+          `HTTP ${response.status}`;
+        
+        console.error("API Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          endpoint,
+        });
+        
+        throw {
+          status: response.status,
+          message: errorMessage,
+          fullError: errorData,
+        };
       }
-    } else {
-      parsed = content;
-    }
 
-    return AnalysisSchema.parse(parsed);
+      const data = await response.json();
+      let content = data.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error("No response content from API");
+      }
+
+      // If not using json_schema, the content might be a string that needs parsing
+      let parsed: any;
+      if (typeof content === "string") {
+        try {
+          parsed = JSON.parse(content);
+        } catch {
+          // If parsing fails, try to extract JSON from the text
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error("Could not parse JSON from API response");
+          }
+        }
+      } else {
+        parsed = content;
+      }
+
+      return AnalysisSchema.parse(parsed);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      
+      // Handle fetch-specific errors
+      if (fetchError.name === "AbortError" || fetchError.code === "UND_ERR_CONNECT_TIMEOUT") {
+        throw new Error(
+          `Connection timeout: Unable to connect to ${endpoint}\n\n` +
+          "This could mean:\n" +
+          "• The API endpoint is down or unreachable\n" +
+          "• The API_BASE_URL is incorrect\n" +
+          "• Network connectivity issues\n" +
+          "• The endpoint requires authentication or has firewall restrictions\n\n" +
+          `Please check your API_BASE_URL: ${apiBaseURL}`
+        );
+      }
+      
+      if (fetchError.cause?.code === "UND_ERR_CONNECT_TIMEOUT") {
+        throw new Error(
+          `Connection timeout: Unable to connect to ${endpoint}\n\n` +
+          "This could mean:\n" +
+          "• The API endpoint is down or unreachable\n" +
+          "• The API_BASE_URL is incorrect\n" +
+          "• Network connectivity issues\n\n" +
+          `Please verify your API_BASE_URL: ${apiBaseURL}`
+        );
+      }
+      
+      // Re-throw if it's already been handled
+      throw fetchError;
+    }
   } catch (error) {
     console.error("Error analyzing screenshot:", error);
     
